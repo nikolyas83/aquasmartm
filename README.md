@@ -21,6 +21,7 @@ Quick notes to build and run this project:
    - `/set-wifi` handler is non-blocking (it starts a connection and replies immediately).
    - PWM values are clamped to the PCA9685 12-bit maximum (4095) to prevent overflow.
    - Consider minimizing dynamic `String` usage in server handlers to avoid heap fragmentation on constrained MCUs.
+   - UI override: place a custom `index.html` in the `data/` folder and upload filesystem to the device (SPIFFS). The server will serve `/index.html` from SPIFFS when present and fall back to the embedded HTML otherwise. Use `pio run -t buildfs` to build filesystem image and `pio run -t uploadfs` to upload to the device.
 
 If you'd like, I can try a build next (if `pio` CLI is available on your system) and address any compile errors.
 

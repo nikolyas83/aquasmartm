@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд управления светодиодами</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(180deg, rgba(18, 18, 18, 0) 0%, rgba(18, 18, 18, 0.9) 15%), #041434;
+            color: #fff;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow-y: auto;
+        }
+
+        header {
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .logo {
+            width: 132px;
+            height: 25px;
+			margin-left: 0;
+			display: block;
+        }
+
+        .header-spacer {
+            width: 30%;
+        }
+
+        .antenna {
+            width: 15%;
+			padding-left: 25px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .antenna div {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 2px;
+        }
+
+        .antenna div:nth-child(1) {
+            width: 4px;
+            height: 4px;
+        }
+
+        .antenna div:nth-child(2) {
+            width: 4px;
+            height: 8px;
+        }
+
+        .antenna div:nth-child(3) {
+            width: 4px;
+            height: 12px;
+        }
+
+        .antenna div:nth-child(4) {
+            width: 4px;
+            height: 16px;
+        }
+
+        .temperature {
+            width: 15%;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .bell {
+            width: 15%;
+            text-align: center;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            cursor: pointer;
+        }
+
+        main {
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 0;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        footer {
+          	display:none;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            text-align: center;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .dashboard {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .spectrum-chart {
+            width: 100%;
+            height: 240px;
+            position: relative;
+            background: rgba(217, 217, 217, 0.1);
+            border-radius: 10px;
+            padding: 1px;
+        }
+
+        .mini-spectrum-chart {
+            width: 60px;
+            height: 40px;
+            background: rgba(217, 217, 217, 0.1);
+            border-radius: 5px;
+            display: block;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .chart-labels {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            top: 12px;
+            left: 12px;
+        }
+
+        .y-labels {
+            position: absolute;
+            left: -10px;
+            top: 5px;
+            height: calc(100% - 35px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: right;
+        }
+
+        .x-labels {
+            position: absolute;
+            bottom: 14px;
+            left: 20px;
+            right: 40px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .perceived-color {
+            width: 100%;
+            height: 10px;
+            border-radius: 2px;
+            margin-top: 0px;
+            background-color: rgb(128, 128, 128);
+            transition: background-color 0.2s;
+        }
+
+        .sliders {
+            width: 100%;
+			margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(6, 50px);
+            gap: 2px;
+            padding: 10px 0;
+            min-height: 190px;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 180px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 170px;
+            height: 4px;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            border-radius: 2px;
+            outline: none;
+            position: relative;
+            top: 85px;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-size: 9px;
+            color: #fff;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        #master-slider {
+			background: linear-gradient(45deg, #222, #fff);
+        }
+        #master-slider::-webkit-slider-thumb {
+            background: #fff;
+        }
+		#master-slider::-moz-range-thumb {
+            background: #fff;
+        }
+
+        #warm-white-slider {
+            background: #ffeb3b;
+        }
+        #warm-white-slider::-webkit-slider-thumb {
+            background: #ffeb3b;
+        }
+        #warm-white-slider::-moz-range-thumb {
+            background: #ffeb3b;
+        }
+
+        #cold-white-slider {
+            background: #e6efff;
+        }
+        #cold-white-slider::-webkit-slider-thumb {
+            background: #e6efff;
+        }
+        #cold-white-slider::-moz-range-thumb {
+            background: #e6efff;
+        }
+
+        #green-slider {
+            background: #00cc00;
+        }
+        #green-slider::-webkit-slider-thumb {
+            background: #00cc00;
+        }
+        #green-slider::-moz-range-thumb {
+            background: #00cc00;
+        }
+
+        #red-slider {
+            background: #ff0000;
+        }
+        #red-slider::-webkit-slider-thumb {
+            background: #ff0000;
+        }
+        #red-slider::-moz-range-thumb {
+            background: #ff0000;
+        }
+
+        #blue-slider {
+            background: #0000ff;
+        }
+        #blue-slider::-webkit-slider-thumb {
+            background: #0000ff;
+        }
+        #blue-slider::-moz-range-thumb {
+            background: #0000ff;
+        }
+
+        .preset-name {
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            min-height: 20px;
+        }
+
+        .buttons {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding-top: 10px;
+        }
+
+        button {
+            padding: 8px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(217, 217, 217, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: rgba(35, 35, 35, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            width: 80%;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            padding: 8px;
+            background: rgba(35, 35, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: #777;
+            font-size: 12px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        .library-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .close-library {
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .close-library:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .library-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .library-tab {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .library-tab.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .preset-group {
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .preset-group h3 {
+            grid-column: 1 / -1;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .preset {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .preset:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .preset-name-text {
+            flex: 1;
+            font-size: 10px;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .preset-star {
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .preset-star.favorite {
+            color: #ffd700;
+        }
+
+        .preset-star:not(.favorite) {
+            color: rgba(255, 255, 255, 0.3);
+        }
+		
+		.device-info {
+			width: 100%;
+			font-size: 12px;
+			color: rgba(255, 255, 255, 0.9);
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			margin-bottom: 15px;
+		}
+
+		.wifi-form {
+			width: 100%;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.wifi-form select {
+			width: 100%;
+			padding: 8px;
+			background: rgba(255, 255, 255, 0.05);
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			border-radius: 5px;
+			color: #fff;
+			font-size: 12px;
+			-webkit-appearance: menulist; /* Забезпечує коректне відображення в WebKit */
+			appearance: menulist;
+		}
+
+		.wifi-form select option {
+			background: #1a1a1a; /* Темний фон для опцій */
+			color: #fff; /* Білий текст для опцій */
+			padding: 8px; /* Додатковий відступ для кращого вигляду */
+		}
+
+		/* Для активного стану (опціонально, для кращого UX) */
+		.wifi-form select:focus {
+			outline: none;
+			border-color: rgba(255, 255, 255, 0.5);
+		}
+
+		/* Для сумісності з Firefox */
+		@-moz-document url-prefix() {
+			.wifi-form select {
+				background: rgba(255, 255, 255, 0.05);
+				color: #fff;
+			}
+			.wifi-form select option {
+				background: #1a1a1a;
+				color: #fff;
+			}
+		}
+		.ota-buttons {
+			width: 100%;
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 8px;
+			padding-top: 10px;
+		}
+	</style>
+</head>
+<body>
+    <header>
+        <img class="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIQAAAAZCAYAAADwvIY6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsEAAA7BAbiRa+0AAAj7SURBVGhD7ZpnrB3FGYZ9Lr2EYooJBAIEiOjNECIINTQrJCBi0zuIYiDBAVMEMTbdxGADNkXgxFRTbJrED8DgBASChJpgeguB0EwL3fY9PO/O7N5v52w991wHJB7p1TezZ2Z2ds7MN2W30a8io6d8cCJmBTRs+O79Z0cXOwjlr4d5ysUSXkZ3oIu452vRlRzIvxNmootFfII2Id//XLQY8i+AeQz1jy44biH/sT6cQFrVaaCLRZxMukk+XBvK+zHGPp/q/Hd0J5pI2XqWQihjfsytaMPoQjafosvRJZT5VXQloMvbQrjZ+piz0TFoX12bS/wEHYdmUIfjoyv5zEI/NPopOgVV5SC0NrJl5LE0sukWQZ3kB2hbdCF6mWcfigr/K/7grzFHIg1yWzer1dGf0NOUtxG2hUodAkagOO3wssrlQb6BaFEfrcNC6HzyjkOZXo0GmYa518US1JDL+XAupJkHc5KLJcgLXuyCvYPy50Wj0JL+Uh3U+S5BU8kvL5YLbfBvzK7oi+hCPmug6ZQnm6L0jyXTYphdXCxiTbS7C1aHcnbA/A3dRVgjIORtdLLXpehZFCL3rZGcx9HoSxeM0H1Oc8FC9kZy25ZraeAXfbi3yLuqHvfw7HZKivkcPYjeQU1dyOA3qLSDUudHMIcgdQq1RSx5EIvaRh4oRaU1BA9xA2ZPF4v4J1qfm+dVPgX5V8E8jWLvoIcfRP7c+Z086qxD0GVocV3zfITWIu9/XTQN+UZi/uhiEZor1837c/199DxrRRccmn50j5dcNA15HsL83MUihpJ2gg+nIO0WmL+iePA9jrYn/Qcumob0AzBqaw0MhS1q71+S9z4XrQ7lyrto2j0zuuBQJ1mS8tQhI6q6/lFojgtGrIt2dsFKnI7sVKFG+p0LZkMlu9Hk7jmz5J1s714CFeU9D9k/Xw1h/7wQjTzbGYS8Q2ZnaIOLkG3nDZDWKplw33fQOIIbIy1yLRrAasvaUKYGhjyVPEiMFqKruqCjUoegMLnvG10sYQS9rtTDkEZ/oEa6ZQZ/9AU+XMhJQwY8gLG7BxGWl0Bd1duPQvcbaTpqwdc/XDvIO5zlgr2D8jfFhKv+8dRRz1QIad7EaDC8G13oYQvKbZn7ubYnuh/djqxHTaBMeZixyLZNasdY1UOIM5D1EnrYbVywkO3Rgi6YMIw/OnFTFbjL25hVeOgf+XALPPi9aFuju/1PIaqbnsNyDem13e0Ev/I2Znazu9u67EKoh6ZFtbtFnTir3VdEW6Nfo0m0jxbKLVDmZN8msZ7zP0VU7hA+42QXS6iyYNvK25jnZ8/66h4frsob3iY0m93h/NoOmqctmpo64h084VQ17cTBS4cjvozp3lq0sC9C06B2Nf2NtFMrpY6HEKGX2Jobbe7DeSzlrac5/fVnH6y0GDW85W1Co9FVt4wUvt4aUZar6fiv+HAn0GGbpe5AEFlbyGW9LUJnMDON/sUzB/9FK7U6BI31POZ6F0sIR1kJjVmXjxxc68/kvhpV6hSysTTX94Zw7SDvoEVXJ1nGW0ezmXLPcxktHm+iU8zrotnU9RBCc6D1EoO4STgPF5F1BlEKnWIFNMBIW8W2oL5a6A1ysYRJlPmqD/cNjUbd6UJkrZX+421ddPo5xgWzaekQNNYyaPk8keQzrxgtcoa5YCZh5VfzNoIyp6A7jC5Dhb24A5yA7LP3hXcQKS/W3T0nc/Vfgv7EEJ3pVOEqpHMby7G078E+3EKqQ5BQB0hyzdry5El/sE4vLYPJu44Ph4T7+Q1HT5lpT+t0nKvtVazD0fmoT6CeescRblv/jHcofHnWJk94G9HVNY99IVYKdVUH0umrRdOtDvaqoLw6tQyn6AmUrbOgFkIPcSpqZ3SqnHBOjglXyQvjVA7wYaFj8BkumPB7KryfD3ea4chuyXRgc44LdpxwEXnkeTe/H27Bi9DJYnjU/UydzkvaqRgdjll0WHcnbbyyi/aQdAh+1JvF/V2sLYb4MlJQIS1Ew9fax5M28jL8/iFG+/Xw8OgK0tQaUWX4BtjHxRLkHV734U5zLbKjc6VGV5fe3pZCXVfCZKW9xts6aBA86oIJOjDUIpMB2oP1EKF30OmkRn2R7BZtPpS34whHoNYi06hM1IH4Q7SY04GK3tfHaCTpDV8nzhtijkD2jWFfeod4MNzuYgkjmTIPHDHxudA7h+jbE/uiTryH9D1DLaiH1kgaCB9HF3rYBF1KGycnzlGAC1roqQPYDnEoBWlRkgv59G2E7bF6gNXIp7VGAun08Dom3TK60IP22LehfyDl2Q3tgSw65t2OMnu7zVQ9rsbYqWgC5Q714cpQTp2XW/oGQTsi2xG70Zhmszn2s0/efXvUwWsq3gJ55SW0zY/Peg7jPlf6cArSaqE82sUSFiJ90qlIo+n5ZpR0AM9w0kXrtriXht5Bbjx8d5HFdcgunDSq5TlScDM9sDpP+IZSp2d7IW2FdAoadgbxC6Tz905g3bca6lwX7Dt4dr1o09dmFrX7CY1G441FFx8wkz9K0mBIQV5936DDM72w09dQhQO0DMqbgtG3FSFnc/8dFegioB4czqs6sbPuOxPSqIHVmSyHUGb6QAZIq+NnPVy4gKzCUZSp1XJvUYPEXOXr1OdwH729PBSFXk4dQ3O5Fo55L6RmIw2y32LD3UI7aFp/0gUT5Ayuo43XVoVC76CbjnfBcqikXjzpw5cYjfo/uGAa0r6A+RmSe607BYynwpv5cLvoG0W9Up4r3sHCs2t067MBLTTtwV4lyJ85rRj0Qq60w1COzpAGo/A7TR1rT23QyFpY6L14zBdk0kcclaEMfaZmdxifUka4s0hBHr2dk2fSwYu+R9DiUR1T6wq5Wa2KNd/buVdnJAMpO/PjmCr4+y5BGb056dQ7Cnvi+iLlVT6FJL/Oew5D+twtflF1EGX8xYfbIqNeD1Nm3vpEr9BbPHm4uPi/QQW1S1F95vAQ0QjimhrtCoUND6NtSJP51fB3DZ4xHoyaGsq8QJ/zrekQedBgWlWH64cxNF7ZV9jf0wbxLuPbjI5fw0OVli+GvqcT9Ov3DZtsAcERYERCAAAAAElFTkSuQmCC">
+        <div class="header-spacer"></div>
+        <div class="antenna">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <div class="temperature">50°C</div>
+        <div class="bell">🔔</div>
+    </header>
+
+    <main>
+        <div class="tabs">
+            <div class="tab active" data-tab="spectrum">SPECTRUM</div>
+            <div class="tab" data-tab="schedule">SCHEDULE</div>
+            <div class="tab" data-tab="device">DEVICE</div>
+        </div>
+
+        <div class="tab-content active" id="spectrum">
+            <div class="dashboard" id="spectrum-main">
+                <div class="spectrum-chart">
+                    <canvas id="spectrumCanvas"></canvas>
+                    <div class="chart-labels">
+                        <div class="y-labels">
+                            <span>100%</span>
+                            <span>80%</span>
+                            <span>60%</span>
+                            <span>40%</span>
+                            <span>20%</span>
+                            <span>0%</span>
+                        </div>
+                        <div class="x-labels">
+                            <span>400</span>
+                            <span>500</span>
+                            <span>560</span>
+                            <span>700</span>
+                            <span>770</span>
+                        </div>
+                    </div>
+                    <div class="perceived-color"></div>
+                </div>
+
+                <div class="sliders">
+                    <div class="slider-container">
+                        <input type="range" id="master-slider" min="0" max="100" value="50">
+                        <div class="slider-value" id="master-value">50%</div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="blue-slider" min="0" max="100" value="0">
+                        <div class="slider-value" id="blue-value">0%</div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="cold-white-slider" min="0" max="100" value="0">
+                        <div class="slider-value" id="cold-white-value">0%</div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="green-slider" min="0" max="100" value="0">
+                        <div class="slider-value" id="green-value">0%</div>
+                    </div>
+				<div class="slider-container">
+                        <input type="range" id="warm-white-slider" min="0" max="100" value="0">
+                        <div class="slider-value" id="warm-white-value">0%</div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="red-slider" min="0" max="100" value="0">
+                        <div class="slider-value" id="red-value">0%</div>
+                    </div>
+                    
+                </div>
+
+                <div class="preset-name" id="preset-name"></div>
+
+                <div class="buttons">
+                    <button id="apply-btn">Apply</button>
+                    <button id="save-as-btn">Save As</button>
+                    <button id="library-btn">Library</button>
+                </div>
+            </div>
+
+            <div class="dashboard" id="library-view" style="display: none;">
+                <div class="library-header">
+                    <span>Spectrum Library</span>
+                    <div class="close-library" id="close-library-btn">✖</div>
+                </div>
+                <div class="library-tabs">
+                    <div class="library-tab active" data-filter="all">All</div>
+                    <div class="library-tab" data-filter="favorites">Favorites</div>
+                </div>
+                <div id="preset-groups"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="schedule">
+            <div class="dashboard">
+                <div style="text-align: center; padding: 20px; font-size: 14px;">
+                    Schedule Tab (Placeholder)
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="device">
+			<div class="dashboard">
+				<div class="device-info">
+					<p>Мережа: <span id="ssid">-</span></p>
+					<p>RSSI: <span id="rssi">-</span> dBm</p>
+					<p>IP: <span id="ip">-</span></p>
+					<p>MAC: <span id="mac">-</span></p>
+				</div>
+				<div class="wifi-form">
+					<select id="wifi-ssid" onchange="document.getElementById('wifi-password').focus()">
+						<option value="">Оберіть мережу</option>
+					</select>
+					<input type="password" id="wifi-password" placeholder="Пароль">
+					<button onclick="setWiFi()">Підключитися</button>
+				</div>
+				<div class="ota-buttons">
+					<button onclick="window.open('/update', '_blank')">Оновити прошивку</button>
+					<button onclick="restart()">Перезавантажити</button>
+				</div>
+			</div>
+		</div>
+    </main>
+
+    <div class="modal" id="save-as-modal">
+        <div class="modal-content">
+            <input type="text" id="preset-name-input" placeholder="Preset Name">
+            <select id="preset-group-select">
+                <option value="Dawn">Dawn</option>
+                <option value="Midday">Midday</option>
+                <option value="Sunset">Sunset</option>
+                <option value="Night">Night</option>
+                <option value="Exotic">Exotic</option>
+            </select>
+            <div class="modal-buttons">
+                <button id="save-preset-btn">Save</button>
+                <button id="cancel-preset-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        16 April 2025, 14:30
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('spectrumCanvas');
+        const ctx = canvas.getContext('2d');
+        const perceivedColor = document.querySelector('.perceived-color');
+        const sliders = {
+            master: document.getElementById('master-slider'),
+            warmWhite: document.getElementById('warm-white-slider'),
+            coldWhite: document.getElementById('cold-white-slider'),
+            green: document.getElementById('green-slider'),
+            red: document.getElementById('red-slider'),
+            blue: document.getElementById('blue-slider')
+        }... (truncated for brevity)
