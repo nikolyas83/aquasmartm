@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U platformio
+
+      - name: Install project dependencies
+        run: |
+          python -m platformio lib -g install "me-no-dev/ESPAsyncWebServer@^3.6.0"
+          python -m platformio lib -g install "me-no-dev/AsyncTCP@^3.3.2"
+          python -m platformio lib -g install "mikaeltulldahl/AsyncOta@^1.0.2"
+          python -m platformio lib -g install "bblanchon/ArduinoJson@^6.19.4"
+          python -m platformio lib -g install "OneWire"
+          python -m platformio lib -g install "DallasTemperature"
+
+      - name: Build
+        run: python -m platformio run --verbose
+
+      - name: Upload firmware artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: .pio/build/**/firmware.bin
+
+      - name: Show size
+        run: python -m platformio run -t size
